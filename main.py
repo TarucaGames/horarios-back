@@ -11,7 +11,7 @@ import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
 
-app = FastAPI(title="Employee Scheduling API")
+app = FastAPI(title="My Employee Scheduling API")
 models.Base.metadata.create_all(bind=engine)
 
 
