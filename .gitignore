@@ -1,2 +1,16 @@
 .vercel
 .env
+
+# Ignore alembic generated data that shouldn't be committed
+alembic/versions/*_draft.py
+
+# Ignore Python compiled files
+*.pyc
+__pycache__/
+
+# Ignore SQLite database file
+*.db
+
+# Ignore virtual environments
+venv/
+env/

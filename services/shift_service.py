@@ -26,3 +26,6 @@ class ShiftService:
             self.db.rollback()
             print(str(error))
             raise HTTPException(status_code=400, detail="Shifts couldn't be deleted")
+
+    def get_all(self):
+        return self.db.query(ShiftDB).all()

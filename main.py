@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, File, HTTPException, Depends, UploadFile
+from fastapi import FastAPI, File, HTTPException, Depends, UploadFile, Query
 from psycopg2 import IntegrityError
 from pydantic import BaseModel
 from typing import List, Annotated
@@ -48,7 +48,8 @@ async def get_all_employees(db: db_dependency):
 
 @app.get("/employee/{id}", tags=["Employee"])
 async def get_employee(id: int, db: db_dependency):
-    result = db.query(models.EmployeeDB).filter(models.EmployeeDB.id == id).first()
+    employee_service = EmployeeService(db)
+    result = employee_service.get(id)
     if not result:
         raise HTTPException(status_code=404, detail="Employee not found")
     return result
@@ -56,8 +57,8 @@ async def get_employee(id: int, db: db_dependency):
 
 @app.get("/shift", tags=["Shift"])
 async def get_all_shifts(db: db_dependency):
-    result = db.query(models.Shift2DB).all()
-    return result
+    shift_service = ShiftService(db)
+    return shift_service.get_all()
 
 
 @app.get("/shift/{id}", tags=["Shift"])
@@ -111,8 +112,8 @@ async def create_shift(shift: models.ShiftModel, db: db_dependency):
     db.refresh(db_shift)
 
 
-@app.post("file/analyze")
-async def upload(file: UploadFile = File(...)):
+@app.post("/file/analyze")
+async def upload(db: db_dependency, file: UploadFile = File(...)):
     try:
         contents = file.file.read()
         filename = file.filename
@@ -146,6 +147,34 @@ async def upload(db: db_dependency, file: UploadFile = File(...)):
         fr = FileReader()
         fr.read("/tmp/", filename, employee_service, shift_service)
         return {"data": "ok"}
+    except Exception as errMsg:
+        print("ERROR")
+        print(errMsg)
+        return {"message": "There was an error uploading the file"}
+
+
+@app.post("/upload-single")
+async def upload(
+    db: db_dependency, employee_id: int = Query(None), file: UploadFile = File(...)
+):
+    try:
+        employee_service = EmployeeService(db)
+        shift_service = ShiftService(db)
+        contents = file.file.read()
+        filename = file.filename
+        open("/tmp/%s" % filename, "wb").write(contents)
+        fr = FileReader()
+        response = fr.read_single(
+            "/tmp/", filename, employee_service, shift_service, employee_id
+        )
+        errors = []
+        if response["hasErrors"]:
+            errors.append("Se encontró algún error en los horarios")
+        response_data = {"data": response, "errors": errors}
+        response_string = json.dumps(response_data)
+        print("RESPONSE")
+        print(response_string)
+        return response_data
     except Exception as errMsg:
         print("ERROR")
         print(errMsg)

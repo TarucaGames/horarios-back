@@ -21,6 +21,7 @@ class EmployeeDB(Base):
     name = Column(String)
     surname = Column(String)
     code = Column(String)
+    color = Column(String)
     active = Column(Boolean, default=False)
     department_id = Column(Integer, ForeignKey("departments.id"))
 
@@ -85,6 +86,7 @@ class EmployeeModel(BaseModel):
     name: str
     surname: str
     code: str
+    color: str
     active: bool
     department: DepartmentModel
 
@@ -120,6 +122,7 @@ class TestObjModel(BaseModel):
 class EmployeeCreate(BaseModel):
     name: str
     code: str
+    color: str
     active: bool = True
     department_id: int = 1
 

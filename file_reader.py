@@ -165,6 +165,159 @@ class FileReader:
             es_feriado,
         ) """
 
+    def read_single(
+        self, path, excel_file, employee_service, shift_service, employee_id
+    ):
+        respuesta = []
+        response = {
+            "id": None,
+            "name": excel_file,
+            "weeks": [],
+            "hasErrors": False,
+        }
+        employee = employee_service.get(employee_id)
+        print(employee.name)
+        # Open workbook
+        workbook = openpyxl.load_workbook(path + excel_file)
+        # Get sheet names
+        sheet_names = workbook.sheetnames
+        # Count sheets
+        sheet_quantity = len(sheet_names)
+        salida_dia_anterior = None
+        contador_dias_descanso = 0
+        contador_dias_trabajo = 0
+
+        for index in range(sheet_quantity):
+            week_number = int(sheet_names[index].split()[1])
+            week_dates = self.get_dates_of_week(week_number)
+            week = {
+                "id": None,
+                "name": "",
+                "days": [],
+                "totalHours": 0,
+                "workHours": 0,
+                "breakHours": 0,
+                "nightHours": 0,
+                "errors": [],
+                "hasErrors": False,
+            }
+            week["name"] = sheet_names[index].upper()
+            # Seleccionar la hoja de trabajo
+            hoja_trabajo = workbook.worksheets[index]
+
+            total_horas_trabajo = 0
+            total_horas_nocturnas = 0
+            total_horas_descanso = 0
+
+            # Inicializar el contador de horas de trabajo
+            # Recorrer el diccionario y llamar a la función para cada día
+            for dia, info in self.semana_diccionario.items():
+                date = week_dates[info["index"]]
+                day = {
+                    "id": None,
+                    "date": date,
+                    "name": dia.upper(),
+                    "start": None,
+                    "end": None,
+                    "isFree": False,
+                    "errors": [],
+                }
+                (
+                    horas_trabajo,
+                    horas_nocturnas,
+                    horas_descanso,
+                    entrada,
+                    salida,
+                    es_feriado,
+                ) = self.contar_horas_diarias(hoja_trabajo, info["inicio"], info["fin"])
+                if salida is not None and entrada is not None:
+                    if contador_dias_descanso == 1:
+                        err = "No se respetan las 48hs de días libres"
+                        print(f"##! -> {err}")
+                        respuesta.append(f"##! -> {err}")
+                        day["errors"].append(err)
+                    contador_dias_trabajo += 1
+                    time_entrada = self.obj_to_time(
+                        entrada["columna"] + 4, ((entrada["fila"] - 3) % 5) * 15
+                    )
+                    time_salida = self.obj_to_time(
+                        salida["columna"] + 4, (((salida["fila"] - 3) % 5) + 1) * 15
+                    )
+                    print(
+                        dia.upper()
+                        + f" - Entrada: {self.to_string(time_entrada)}"
+                        + f" - Salida: {self.to_string(time_salida)}"
+                    )
+                    respuesta.append(
+                        dia.upper()
+                        + f" - Entrada: {self.to_string(time_entrada)}"
+                        + f" - Salida: {self.to_string(time_salida)}"
+                    )
+                    day["start"] = self.to_string(time_entrada)
+                    day["end"] = self.to_string(time_salida)
+                    if salida_dia_anterior is not None:
+                        siguiente_entrada = self.get_proxima_entrada(
+                            salida_dia_anterior
+                        )
+                        if siguiente_entrada.time() > time_entrada.time():
+                            err = "No se respetan las horas de descanso"
+                            print(f"##! -> {err}")
+                            respuesta.append(f"##! -> {err}")
+                            day["errors"].append(err)
+                    salida_dia_anterior = time_salida
+                    if contador_dias_trabajo > 7:
+                        err = "Más de 7 días de trabajo seguidos"
+                        print(f"##! -> {err}")
+                        respuesta.append(f"##! -> {err}")
+                        day["errors"].append(err)
+                    contador_dias_descanso = 0
+                    day["type"] = "Holiday" if es_feriado else "Working"
+                    data = {
+                        "employee_id": employee_id,
+                        "start_time": self.to_string(time_entrada),
+                        "end_time": self.to_string(time_salida),
+                        "week": week_number,
+                        "type": 1,
+                        "date": str(date),
+                    }
+                    current = ShiftCreate(**data)
+                    shift_service.create(current)
+                    print(current)
+                else:
+                    day["isFree"] = True
+                    day["type"] = "Free"
+                    contador_dias_trabajo = 0
+                    contador_dias_descanso += 1
+                    salida_dia_anterior = None
+
+                total_horas_trabajo += horas_trabajo
+                total_horas_nocturnas += horas_nocturnas
+                total_horas_descanso += horas_descanso
+                if day["errors"]:
+                    week["hasErrors"] = True
+                week["days"].append(day)
+
+            # Cerrar el libro de trabajo
+            workbook.close()
+            print(sheet_names[index].upper())
+            respuesta.append(sheet_names[index].upper())
+            print(
+                f"Total horas: {total_horas_trabajo + total_horas_descanso} \nHoras recepción: {total_horas_trabajo} ({total_horas_nocturnas} son nocturas) \nHoras descanso: {total_horas_descanso}"
+            )
+            respuesta.append(
+                f"Total horas: {total_horas_trabajo + total_horas_descanso} \nHoras recepción: {total_horas_trabajo} ({total_horas_nocturnas} son nocturas) \nHoras descanso: {total_horas_descanso}"
+            )
+            print("=======")
+            respuesta.append("=======")
+            week["breakHours"] = total_horas_descanso
+            week["workHours"] = total_horas_trabajo
+            week["nightHours"] = total_horas_nocturnas
+            week["totalHours"] = total_horas_trabajo + total_horas_descanso
+            if week["hasErrors"]:
+                response["hasErrors"] = True
+            response["weeks"].append(week)
+        return response
+
     def contar_horas_trabajo(self, path, archivo_excel):
         respuesta = []
         response = {
@@ -359,7 +512,7 @@ class FileReader:
         locale.setlocale(locale.LC_TIME, "es_ES.UTF-8")
 
         # Determine the first day of the week
-        first_day = datetime.strptime(f"2023-W{week_number}-1", "%Y-W%W-%w").date()
+        first_day = datetime.strptime(f"2024-W{week_number}-1", "%Y-W%W-%w").date()
 
         # Calculate the dates for the entire week
         dates_of_week = [first_day + timedelta(days=i) for i in range(7)]

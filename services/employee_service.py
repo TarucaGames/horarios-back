@@ -15,3 +15,8 @@ class EmployeeService:
 
     def get_all(self):
         return self.db.query(models.EmployeeDB).all()
+
+    def get(self, id):
+        return (
+            self.db.query(models.EmployeeDB).filter(models.EmployeeDB.id == id).first()
+        )
