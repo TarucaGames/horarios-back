@@ -77,12 +77,12 @@ class TestObjDB(Base):
 
 
 class DepartmentModel(BaseModel):
-    id: int | None
+    id: Optional[int]
     name: str
 
 
 class EmployeeModel(BaseModel):
-    id: int | None
+    id: Optional[int]
     name: str
     surname: str
     code: str
@@ -131,7 +131,7 @@ class ShiftCreate(BaseModel):
     date: str
     employee_id: int
     start_time: str
-    end_time: str | None
+    end_time: Optional[str]
     week: int
     type: int = 1
     # Work: 1, Holiday: 2, Free: 3
