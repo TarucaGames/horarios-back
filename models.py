@@ -24,6 +24,7 @@ class EmployeeDB(Base):
     color = Column(String)
     active = Column(Boolean, default=False)
     department_id = Column(Integer, ForeignKey("departments.id"))
+    nickname = Column(String)
 
 
 class DepartmentDB(Base):
@@ -89,6 +90,7 @@ class EmployeeModel(BaseModel):
     color: str
     active: bool
     department: DepartmentModel
+    nickname: str
 
 
 class ShiftModel(BaseModel):
@@ -125,6 +127,7 @@ class EmployeeCreate(BaseModel):
     color: str
     active: bool = True
     department_id: int = 1
+    nickname: str = ""
 
 
 class ShiftCreate(BaseModel):
