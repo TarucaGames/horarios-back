@@ -2,7 +2,7 @@ import json
 from fastapi import FastAPI, File, HTTPException, Depends, UploadFile, Query
 from psycopg2 import IntegrityError
 from pydantic import BaseModel
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 from analyzer import FileAnalyzer
 from file_reader import FileReader
 from services.employee_service import EmployeeService
@@ -56,9 +56,9 @@ async def get_employee(id: int, db: db_dependency):
 
 
 @app.get("/shift", tags=["Shift"])
-async def get_all_shifts(db: db_dependency):
+async def get_all_shifts(db: db_dependency, date: Optional[str] = Query(None)):
     shift_service = ShiftService(db)
-    return shift_service.get_all()
+    return shift_service.get_all(date)
 
 
 @app.get("/shift/{id}", tags=["Shift"])
