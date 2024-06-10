@@ -1,6 +1,7 @@
 import uvicorn
 import json
 from fastapi import FastAPI, File, HTTPException, Depends, UploadFile, Query
+from fastapi.middleware.cors import CORSMiddleware
 from psycopg2 import IntegrityError
 from pydantic import BaseModel
 from typing import List, Annotated, Optional
@@ -12,7 +13,21 @@ import models
 from database import engine, SessionLocal
 from sqlalchemy.orm import Session
 
+origins = [
+    "http://localhost",
+    "https://9000-idx-employee-planner-1717323653464.cluster-rcyheetymngt4qx5fpswua3ry4.cloudworkstations.dev",  # Example for Angular development server
+]
+
 app = FastAPI(title="My Employee Scheduling API")
+# Add CORS middleware with appropriate configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
+
 models.Base.metadata.create_all(bind=engine)
 
 
