@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 from psycopg2 import IntegrityError
-from models import ShiftCreate, ShiftDB
+from models import ShiftCreate, ShiftDB, MultipleShiftCreate
 
 
 class ShiftService:
@@ -18,6 +18,20 @@ class ShiftService:
             self.db.rollback()
             raise HTTPException(status_code=400, detail="Shift already exists")
         return db_shift
+
+    def create_multiple(self, data: MultipleShiftCreate):
+        response = []
+        shifts = data.shifts
+        for shift in shifts:
+            try:
+                result = self.create(shift)
+                response.append(result)
+            except Exception as error:
+                print(str(error))
+                # create field in shift to store error, for now it is set type=3 to indicate error
+                shift.type = 3
+                response.append(shift)
+        return response
 
     def delete(self, week_number: int):
         try:

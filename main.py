@@ -115,17 +115,15 @@ async def create_employee(employee_data: models.EmployeeCreate, db: db_dependenc
 
 
 @app.post("/shift", tags=["Shift"], status_code=201)
-async def create_shift(shift: models.ShiftModel, db: db_dependency):
-    db_shift = models.Shift2DB(
-        employee_id=shift.employee_id,
-        start_time=shift.start_time,
-        end_time=shift.end_time,
-        date=shift.date,
-        is_holiday=shift.is_holiday,
-    )
-    db.add(db_shift)
-    db.commit()
-    db.refresh(db_shift)
+async def create_shift(db: db_dependency, shift: models.ShiftCreate):
+    shift_service = ShiftService(db)
+    return shift_service.create(shift)
+
+
+@app.post("/shift/multiple", tags=["Shift"], status_code=201)
+async def create_shift(db: db_dependency, data: models.MultipleShiftCreate):
+    shift_service = ShiftService(db)
+    return shift_service.create_multiple(data)
 
 
 @app.post("/file/analyze")

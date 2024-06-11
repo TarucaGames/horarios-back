@@ -1,5 +1,4 @@
-import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel
 from sqlalchemy import (
     Boolean,
@@ -138,3 +137,7 @@ class ShiftCreate(BaseModel):
     week: int
     type: int = 1
     # Work: 1, Holiday: 2, Free: 3
+
+
+class MultipleShiftCreate(BaseModel):
+    shifts: List[ShiftCreate]
